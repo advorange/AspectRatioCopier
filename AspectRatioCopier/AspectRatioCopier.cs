@@ -4,7 +4,6 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text;
 using static FindImagesWithAspectRatio.HelperFunctions;
 
 namespace FindImagesWithAspectRatio
@@ -20,7 +19,7 @@ namespace FindImagesWithAspectRatio
 		private int _MinWidth;
 		private string _Source;
 		private string _Destination;
-		private string[] _ValidExtensions = new[] { ".jpg", ".jpeg", ".tiff", ".tif", ".bmp", ".png", ".webp" };
+		private readonly string[] _ValidExtensions = new[] { ".jpg", ".jpeg", ".tiff", ".tif", ".bmp", ".png", ".webp" };
 
 		public AspectRatioCopier()
 		{
@@ -34,7 +33,8 @@ namespace FindImagesWithAspectRatio
 			_Destination = null;
 		}
 
-		public void GetAspectRatio(string input)
+		//Should be able to easily hook up a UI to this now that these are bools. Too lazy to do that though.
+		public bool SetAspectRatio(string input)
 		{
 			if (double.TryParse(input, NumberStyles.Any, CultureInfo.InvariantCulture, out double aspectRatio))
 			{
@@ -49,45 +49,46 @@ namespace FindImagesWithAspectRatio
 			if (aspectRatio > 0)
 			{
 				_AspectRatio = aspectRatio;
+				return true;
 			}
 			else
 			{
 				Console.WriteLine("Invalid aspect ratio provided.");
-				GetAspectRatio(Console.ReadLine());
+				return false;
 			}
 		}
-		public void GetAbsoluteOrClose(string input)
+		public bool SetAbsoluteOrClose(string input)
 		{
 			if (CaseInsEquals(input, "y") || CaseInsEquals(input, "yes"))
 			{
 				_Absolute = true;
+				return true;
 			}
 			else if (CaseInsEquals(input, "n") || CaseInsEquals(input, "no"))
 			{
 				_Absolute = false;
-
-				Console.WriteLine("Enter the percentage for how close an image's aspect ratio can be to the given aspect ratio.");
-				GetPercentageCloseness(Console.ReadLine());
+				return true;
 			}
 			else
 			{
 				Console.WriteLine("Invalid option provided.");
-				GetAbsoluteOrClose(Console.ReadLine());
+				return false;
 			}
 		}
-		public void GetPercentageCloseness(string input)
+		public bool SetPercentageCloseness(string input)
 		{
 			if (_Absolute)
 			{
-				return;
+				return true;
 			}
 
-			if (double.TryParse(input, NumberStyles.Any, CultureInfo.InvariantCulture, out double percentageCloseness))
+			double percentageCloseness = 0;
+			if (int.TryParse(input, NumberStyles.Any, CultureInfo.InvariantCulture, out int closeness))
 			{
+				percentageCloseness = closeness / 100.0;
 			}
-			else if (int.TryParse(input, NumberStyles.Any, CultureInfo.InvariantCulture, out int closeness))
+			else if (double.TryParse(input, NumberStyles.Any, CultureInfo.InvariantCulture, out percentageCloseness))
 			{
-				percentageCloseness = closeness / 100;
 			}
 
 			if (percentageCloseness > 0)
@@ -95,14 +96,15 @@ namespace FindImagesWithAspectRatio
 				_PercentageCloseness = percentageCloseness;
 				_UpperBound = _AspectRatio * (1.0 + _PercentageCloseness);
 				_LowerBound = _AspectRatio * (1.0 - _PercentageCloseness);
+				return true;
 			}
 			else
 			{
 				Console.WriteLine("Invalid percentage closeness provided.");
-				GetPercentageCloseness(Console.ReadLine());
+				return false;
 			}
 		}
-		public void GetMinWidth(string input)
+		public bool SetMinWidth(string input)
 		{
 			if (int.TryParse(input, NumberStyles.Any, CultureInfo.InvariantCulture, out int minWidth))
 			{
@@ -115,30 +117,33 @@ namespace FindImagesWithAspectRatio
 				{
 					_HasMinWidth = false;
 				}
+				return true;
 			}
 			else
 			{
 				Console.WriteLine("Invalid minimum width provided.");
-				GetMinWidth(Console.ReadLine());
+				return false;
 			}
 		}
-		public void GetSourceFolder(string input)
+		public bool SetSourceFolder(string input)
 		{
 			if (Directory.Exists(input))
 			{
 				_Source = input;
+				return true;
 			}
 			else
 			{
 				Console.WriteLine("Invalid source directory provided.");
-				GetSourceFolder(Console.ReadLine());
+				return false;
 			}
 		}
-		public void GetDestinationFolder(string input)
+		public bool SetDestinationFolder(string input)
 		{
 			if (Directory.Exists(input))
 			{
 				_Destination = input;
+				return true;
 			}
 			else
 			{
@@ -146,14 +151,61 @@ namespace FindImagesWithAspectRatio
 				{
 					var dirInfo = Directory.CreateDirectory(Path.Combine(_Source, input));
 					_Destination = dirInfo.FullName;
+					return true;
 				}
 				catch (Exception e)
 				{
 					PrintOutException(e, "Unable to create the provided sub-directory inside the source directory. ");
 					Console.WriteLine("Please enter a valid directory or sub-directory name.");
-					GetSourceFolder(Console.ReadLine());
+					return false;
 				}
 			}
+		}
+
+		public double AspectRatio
+		{
+			get { return _AspectRatio; }
+			set { _AspectRatio = value; }
+		}
+		public bool Absolute
+		{
+			get { return _Absolute; }
+			set { _Absolute = value; }
+		}
+		public double PercentageCloseness
+		{
+			get { return _PercentageCloseness; }
+			set { _PercentageCloseness = value; }
+		}
+		public double UpperBound
+		{
+			get { return _UpperBound; }
+			set { _UpperBound = value; }
+		}
+		public double LowerBound
+		{
+			get { return _LowerBound; }
+			set { _LowerBound = value; }
+		}
+		public bool HasMinWidth
+		{
+			get { return _HasMinWidth; }
+			set { _HasMinWidth = value; }
+		}
+		public int MinWidth
+		{
+			get { return _MinWidth; }
+			set { _MinWidth = value; }
+		}
+		public string Source
+		{
+			get { return _Source; }
+			set { _Source = value; }
+		}
+		public string Destination
+		{
+			get { return _Destination; }
+			set { _Destination = value; }
 		}
 
 		private bool GetAspectRatioFromInputNeedingSplitting(string input, char splitChar, out double aspectRatio)
@@ -161,7 +213,7 @@ namespace FindImagesWithAspectRatio
 			var splitInput = input.Split(new[] { splitChar }, 2);
 			if (splitInput.Length == 2 && int.TryParse(splitInput[0], out int leftSide) && int.TryParse(splitInput[1], out int rightSide))
 			{
-				aspectRatio = (leftSide * 1.0) / rightSide;
+				aspectRatio = (double)leftSide / rightSide;
 				return true;
 			}
 			else
@@ -207,12 +259,12 @@ namespace FindImagesWithAspectRatio
 					continue;
 				}
 
-				var aspectRatio = (width * 1.0) / height;
+				var aspectRatio = (double)width / height;
 				if (_Absolute)
 				{
 					if (_AspectRatio == aspectRatio)
 					{
-						Console.WriteLine(String.Format("Another image match found. {0}/{1} images looked through.", i + 1, withImageExtension.Length));
+						Console.WriteLine(String.Format("Image match found. {0}/{1} images looked through.", i + 1, withImageExtension.Length));
 						matchingSearchCriteria.Add(path);
 						continue;
 					}
@@ -221,7 +273,7 @@ namespace FindImagesWithAspectRatio
 				{
 					if (_UpperBound >= aspectRatio && aspectRatio >= _LowerBound)
 					{
-						Console.WriteLine(String.Format("Another image match found. {0}/{1} images looked through.", i + 1, withImageExtension.Length));
+						Console.WriteLine(String.Format("Image match found. {0}/{1} images looked through.", i + 1, withImageExtension.Length));
 						matchingSearchCriteria.Add(path);
 						continue;
 					}
@@ -253,12 +305,6 @@ namespace FindImagesWithAspectRatio
 			}
 
 			Console.WriteLine(String.Format("Successfully copied {0} files. Failed to copy {1} files.", imagePaths.Count() - failures, failures));
-		}
-
-		public override string ToString()
-		{
-			//TODO: Format this
-			return base.ToString();
 		}
 	}
 }
